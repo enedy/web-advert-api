@@ -12,6 +12,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using WebAdvert.Api.Services;
+using WebAdvert.Api.HealthChecks;
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.DataModel;
 
 namespace WebAdvert.Api
 {
@@ -27,12 +31,18 @@ namespace WebAdvert.Api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddDefaultAWSOptions(Configuration.GetAWSOptions());
+            services.AddAWSService<IAmazonDynamoDB>();
+            services.AddTransient<IDynamoDBContext, DynamoDBContext>();
             services.AddAutoMapper(typeof(Startup));
+            services.AddScoped<IAdvertStorageService, DynamoDBAdvertStorageService>();
+            services.AddHealthChecks().AddCheck<StorageHealthCheck>("StorageHealthCheck");
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "WebAdvert.Api", Version = "v1" });
             });
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -55,6 +65,8 @@ namespace WebAdvert.Api
             {
                 endpoints.MapControllers();
             });
+
+            app.UseHealthChecks("/health");
         }
     }
 }

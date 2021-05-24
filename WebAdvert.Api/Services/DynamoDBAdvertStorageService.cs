@@ -4,15 +4,22 @@ using WebAdvert.Models;
 using AutoMapper;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
+using System.Collections.Generic;
+using Amazon;
 
 namespace WebAdvert.Api.Services
 {
     public class DynamoDBAdvertStorageService : IAdvertStorageService
     {
         private readonly IMapper _mapper;
-        public DynamoDBAdvertStorageService(IMapper mapper)
+        private readonly IAmazonDynamoDB _amazonDynamoDB;
+        private readonly IDynamoDBContext _dynamoDBContext;
+        public DynamoDBAdvertStorageService(IMapper mapper, IAmazonDynamoDB amazonDynamoDB,
+            IDynamoDBContext dynamoDBContext)
         {
             _mapper = mapper;
+            _amazonDynamoDB = amazonDynamoDB;
+            _dynamoDBContext = dynamoDBContext;
         }
 
         public async Task<string> Add(AdvertModel model)
@@ -33,9 +40,29 @@ namespace WebAdvert.Api.Services
             return dbModel.Id;
         }
 
-        public async Task<bool> Confirm(ConfirmAdvertModel model)
+        public async Task<bool> CheckHealthAsync()
         {
-            throw new NotImplementedException();
+            var tableData = await _amazonDynamoDB.DescribeTableAsync("Adverts");
+            return string.Compare(tableData.Table.TableStatus, "active", true) == 0;
+        }
+
+        public async Task Confirm(ConfirmAdvertModel model)
+        {
+            //using (var context = new DynamoDBContext(_amazonDynamoDB))
+            //{
+                var record = await _dynamoDBContext.LoadAsync<AdvertDbModel>(model.Id);
+                if (record == null) throw new KeyNotFoundException($"A record with ID={model.Id} was not found.");
+
+                if (model.AdvertStatus == AdvertStatus.Active)
+                {
+                    record.AdvertStatus = AdvertStatus.Active;
+                    await _dynamoDBContext.SaveAsync(record);
+                }
+                else
+                {
+                    await _dynamoDBContext.DeleteAsync(record);
+                }
+            //}
         }
     }
 }
