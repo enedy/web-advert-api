@@ -6,6 +6,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using System.Collections.Generic;
 using Amazon;
+using System.Linq;
 
 namespace WebAdvert.Api.Services
 {
@@ -50,19 +51,35 @@ namespace WebAdvert.Api.Services
         {
             //using (var context = new DynamoDBContext(_amazonDynamoDB))
             //{
-                var record = await _dynamoDBContext.LoadAsync<AdvertDbModel>(model.Id);
-                if (record == null) throw new KeyNotFoundException($"A record with ID={model.Id} was not found.");
+            var record = await _dynamoDBContext.LoadAsync<AdvertDbModel>(model.Id);
+            if (record == null) throw new KeyNotFoundException($"A record with ID={model.Id} was not found.");
 
-                if (model.AdvertStatus == AdvertStatus.Active)
-                {
-                    record.AdvertStatus = AdvertStatus.Active;
-                    await _dynamoDBContext.SaveAsync(record);
-                }
-                else
-                {
-                    await _dynamoDBContext.DeleteAsync(record);
-                }
+            if (model.AdvertStatus == AdvertStatus.Active)
+            {
+                record.AdvertStatus = AdvertStatus.Active;
+                await _dynamoDBContext.SaveAsync(record);
+            }
+            else
+            {
+                await _dynamoDBContext.DeleteAsync(record);
+            }
             //}
+        }
+
+        public async Task<List<AdvertModel>> GetAllAsync()
+        {
+            var scanResult =
+                await _dynamoDBContext.ScanAsync<AdvertDbModel>(new List<ScanCondition>()).GetNextSetAsync();
+
+            return scanResult.Select(item => _mapper.Map<AdvertModel>(item)).ToList();
+        }
+
+        public async Task<AdvertModel> GetByIdAsync(string id)
+        {
+            var dbModel = await _dynamoDBContext.LoadAsync<AdvertDbModel>(id);
+            if (dbModel != null) return _mapper.Map<AdvertModel>(dbModel);
+
+            throw new KeyNotFoundException();
         }
     }
 }
