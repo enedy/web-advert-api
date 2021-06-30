@@ -16,6 +16,7 @@ using WebAdvert.Api.Services;
 using WebAdvert.Api.HealthChecks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.SimpleNotificationService;
 
 namespace WebAdvert.Api
 {
@@ -33,6 +34,7 @@ namespace WebAdvert.Api
         {
             services.AddDefaultAWSOptions(Configuration.GetAWSOptions());
             services.AddAWSService<IAmazonDynamoDB>();
+            services.AddAWSService<IAmazonSimpleNotificationService>();
             services.AddTransient<IDynamoDBContext, DynamoDBContext>();
             services.AddAutoMapper(typeof(Startup));
             services.AddScoped<IAdvertStorageService, DynamoDBAdvertStorageService>();

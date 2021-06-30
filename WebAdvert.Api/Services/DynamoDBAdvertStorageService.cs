@@ -26,17 +26,11 @@ namespace WebAdvert.Api.Services
         public async Task<string> Add(AdvertModel model)
         {
             var dbModel = _mapper.Map<AdvertDbModel>(model);
-            dbModel.Id = new Guid().ToString();
+            dbModel.Id = Guid.NewGuid().ToString();
             dbModel.CreationDateTime = DateTime.UtcNow;
             dbModel.AdvertStatus = AdvertStatus.Pending;
 
-            using (var client = new AmazonDynamoDBClient())
-            {
-                using (var context = new DynamoDBContext(client))
-                {
-                    await context.SaveAsync(dbModel);
-                }
-            }
+            await _dynamoDBContext.SaveAsync(dbModel);
 
             return dbModel.Id;
         }
